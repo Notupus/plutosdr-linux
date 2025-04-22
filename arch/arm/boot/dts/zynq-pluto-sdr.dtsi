@@ -13,11 +13,11 @@
 	model = "Analog Devices PlutoSDR Rev.A (Z7010/AD9363)";
 	memory {
 		device_type = "memory";
-		reg = <0x00000000 0x20000000>;
+		reg = <0x00000000 0x40000000>;
 	};
 
 	chosen {
-		stdout-path = "/amba@0/uart@E0001000";
+		stdout-path = "/amba@0/uart@E0000000";
 	};
 
 	clocks {
@@ -30,21 +30,50 @@
 		};
 	};
 
-};
+	usb_phy0: phy0 {
+		compatible = "ulpi-phy";
+		#phy-cells = <0>;
+		reg = <0xe0002000 0x1000>;
+		view-port = <0x0170>;
+		drv-vbus;
+	};
 
+};
+&clkc {
+	ps-clk-frequency = <50000000>;
+};
 &sdhci0 {
-	status = "disabled";
+	status = "okay";
+	xlnx,has-cd = <0x0>;
+	xlnx,has-power = <0x0>;
+	xlnx,has-wp = <0x0>;
 };
-
 &watchdog0 {
 	status = "okay";
 	reset-on-timeout;
 };
+&gem0 {
+	status = "okay";
+	phy-mode = "rgmii-id";
+	phy-handle = <&phy0>;
+
+	phy0: phy@0 { /* Marvell 88e1512 */
+		reg = <0>;
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reset-gpios = <&gpio0 46 1>;
+	};
+};
+
 
 &usb0 {
-	xlnx,phy-reset-gpio = <&gpio0 52 0>;
+	xlnx,phy-reset-gpio = <&gpio0 47 0>;
 	dr_mode = "otg";
 	status = "okay";
+	usb-phy = <&usb_phy0>;
+};
+&uart0 {
+        u-boot,dm-pre-reloc;
+        status = "okay";
 };
 
 &qspi {
@@ -58,7 +87,7 @@
 		#size-cells = <1>;
 		spi-tx-bus-width = <1>;
 		spi-rx-bus-width = <4>;
-		compatible = "jedec,spi-nor";
+		compatible = "n25q256a", "n25q512a", "jedec,spi-nor"; /* same as S25FL256 */
 		reg = <0x0>;
 		spi-max-frequency = <50000000>;
 		partition@qspi-fsbl-uboot {
@@ -97,18 +126,7 @@
 		#size-cells = <0x1>;
 		ranges;
 
-		axi_i2c0: i2c@41600000 {
-			compatible = "xlnx,axi-iic-1.02.a", "xlnx,xps-iic-2.00.a";
-			reg = <0x41600000 0x10000>;
-			interrupt-parent = <&intc>;
-			interrupts = <0 59 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&clkc 15>;
-			clock-names = "pclk";
-
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-		};
+		
 
 		rx_dma: dma@7c400000 {
 			compatible = "adi,axi-dmac-1.00.a";
